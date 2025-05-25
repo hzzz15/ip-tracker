@@ -1,3 +1,5 @@
 visitor_log.csv
 visitor_log.txt
 __pycache__/
+
+venv/
