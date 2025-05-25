@@ -3,3 +3,5 @@ visitor_log.txt
 __pycache__/
 
 venv/
+
+google_credentials.json
