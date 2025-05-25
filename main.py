@@ -2,14 +2,20 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 import httpx
 import datetime
+import os
+import json
+from dotenv import load_dotenv
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 app = FastAPI()
 
-# 🔐 인증 및 스프레드시트 연결
+# 🔐 환경변수에서 GOOGLE_CREDS 불러오기
+load_dotenv()
+google_creds = json.loads(os.getenv("GOOGLE_CREDS"))
+
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-credentials = ServiceAccountCredentials.from_json_keyfile_name("google_credentials.json", scope)
+credentials = ServiceAccountCredentials.from_json_keyfile_dict(google_creds, scope)
 gc = gspread.authorize(credentials)
 sheet = gc.open_by_key("1exQBYLKs9-ACe8WC8QTGemRrFeJKQiZsN-p7KmXuJBM").sheet1
 
@@ -22,6 +28,7 @@ async def get_geo_info(ip: str):
     except:
         return {}
 
+# 🔍 방문자 추적 및 저장
 @app.get("/", response_class=HTMLResponse)
 async def track_and_show(request: Request):
     ip = request.client.host
@@ -31,7 +38,7 @@ async def track_and_show(request: Request):
     city = geo.get("city", "Unknown")
     now = datetime.datetime.now().isoformat()
 
-    # 📤 Google Sheets에 기록
+    # Google Sheets에 한 줄 기록
     sheet.append_row([now, ip, user_agent, country, city])
 
     html = f"""
@@ -51,6 +58,7 @@ async def track_and_show(request: Request):
     """
     return HTMLResponse(content=html)
 
+# 📋 로그 확인
 @app.get("/log", response_class=HTMLResponse)
 async def show_logs():
     rows = sheet.get_all_values()

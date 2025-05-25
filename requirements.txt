@@ -3,3 +3,4 @@ uvicorn[standard]
 httpx
 gspread
 oauth2client
+python-dotenv

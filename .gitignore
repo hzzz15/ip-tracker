@@ -1,7 +1,17 @@
+# Python 캐시 및 임시파일
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# 가상환경
+venv/
+.env
+
+# 방문자 로그 (로컬 저장용 파일)
 visitor_log.csv
 visitor_log.txt
-__pycache__/
 
-venv/
-
-google_credentials.json
+# Mac 사용 시 생기는 숨김파일
+.DS_Store
