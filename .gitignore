@@ -15,3 +15,5 @@ visitor_log.txt
 
 # Mac 사용 시 생기는 숨김파일
 .DS_Store
+google_credentials.json
+google_credentials.json
