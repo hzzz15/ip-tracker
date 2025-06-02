@@ -2,22 +2,9 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 import httpx
 import datetime
-import os
-import json
-from dotenv import load_dotenv
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 
 app = FastAPI()
-
-# 🔐 환경변수에서 GOOGLE_CREDS 불러오기
-load_dotenv()
-google_creds = json.loads(os.getenv("GOOGLE_CREDS"))
-
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-credentials = ServiceAccountCredentials.from_json_keyfile_dict(google_creds, scope)
-gc = gspread.authorize(credentials)
-sheet = gc.open_by_key("1exQBYLKs9-ACe8WC8QTGemRrFeJKQiZsN-p7KmXuJBM").sheet1
+visit_logs = []  # 🔄 메모리 내 접속 로그 저장 (재시작 시 초기화됨)
 
 # 📍 위치정보 수집 함수
 async def get_geo_info(ip: str):
@@ -28,7 +15,7 @@ async def get_geo_info(ip: str):
     except:
         return {}
 
-# 🔍 방문자 추적 및 저장
+# 🔍 방문자 추적
 @app.get("/", response_class=HTMLResponse)
 async def track_and_show(request: Request):
     ip = request.client.host
@@ -38,8 +25,10 @@ async def track_and_show(request: Request):
     city = geo.get("city", "Unknown")
     now = datetime.datetime.now().isoformat()
 
-    # Google Sheets에 한 줄 기록
-    sheet.append_row([now, ip, user_agent, country, city])
+    # 📥 메모리에 기록
+    visit_logs.append([now, ip, user_agent, country, city])
+    if len(visit_logs) > 500:
+        visit_logs.pop(0)  # 오래된 기록 삭제
 
     html = f"""
     <html>
@@ -61,11 +50,10 @@ async def track_and_show(request: Request):
 # 📋 로그 확인
 @app.get("/log", response_class=HTMLResponse)
 async def show_logs():
-    rows = sheet.get_all_values()
-    headers, data = rows[0], rows[1:]
+    headers = ["시간", "IP", "브라우저", "국가", "도시"]
 
     log_html = "<table border='1' cellpadding='5'><tr>" + "".join(f"<th>{h}</th>" for h in headers) + "</tr>"
-    for row in data[-100:]:
+    for row in visit_logs[-100:]:
         log_html += "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>"
     log_html += "</table>"
 
@@ -73,7 +61,7 @@ async def show_logs():
     <html>
         <head><meta charset='UTF-8'><title>방문자 로그</title></head>
         <body style='font-family:sans-serif;padding:40px;'>
-            <h2>📋 방문자 로그 (최근 {len(data)}명)</h2>
+            <h2>📋 방문자 로그 (최근 {len(visit_logs)}명)</h2>
             {log_html}
         </body>
     </html>
